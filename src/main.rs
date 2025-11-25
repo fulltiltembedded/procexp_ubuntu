@@ -1,13 +1,9 @@
 use sysinfo::{System};
 
-fn get_process_list()
-{
-    let mut system = System::new_all();
-    system.refresh_all();
-    system.refresh_cpu_all();
+mod gui;
 
-    // Iterate through the list.
-    let processes = system.processes();
+fn show_process_stub(processes: &std::collections::HashMap<sysinfo::Pid, sysinfo::Process>)
+{
     for (pid, process) in processes { 
         if process.cpu_usage() > 0.0 {
             println!("--------------------------------------");
@@ -23,5 +19,14 @@ fn get_process_list()
 }
 
 fn main() {
-    get_process_list();
+    // Create new sysinfo::system.
+    let mut system = System::new_all();
+    system.refresh_all();
+    system.refresh_cpu_all();
+
+    // Show process info.
+    show_process_stub(system.processes());
+
+    // Show GUI stub.
+    gui::show_gui_stub();
 }
