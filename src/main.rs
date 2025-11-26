@@ -1,5 +1,5 @@
-mod gui;
-mod visible_columns;
+mod process_explorer_app;
+mod columns;
 
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
@@ -11,6 +11,6 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "Process Explorer",
         options,
-        Box::new(|cc| Box::new(gui::ProcessExplorerApp::new(cc))),
+        Box::new(|cc| Box::new(process_explorer_app::ProcessExplorerApp::new(cc))),
     )
 }

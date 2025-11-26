@@ -1,12 +1,12 @@
 use eframe::egui;
-use sysinfo::{System};
-use crate::visible_columns::VisibleColumns;
+use sysinfo::{Pid, Process, System};
+use crate::columns::VisibleColumns;
 
 pub struct ProcessExplorerApp {
     system: System,
     visible_columns: VisibleColumns,
+    last_refresh: std::time::Instant,
 }
-
 
 impl ProcessExplorerApp {
     pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
@@ -16,6 +16,7 @@ impl ProcessExplorerApp {
         Self {
             system,
             visible_columns: VisibleColumns::default(),
+            last_refresh: std::time::Instant::now(),
         }
     }
 
@@ -36,11 +37,16 @@ impl ProcessExplorerApp {
         }
     }
 
-}
+    fn get_process_list(&self) -> Vec<(Pid, &Process)> {
+        let processes: Vec<(Pid, &Process)> = self.system.processes()
+            .iter()
+            .map(|(pid, proc)| (*pid, proc))
+            .collect();
+        processes
+    }
 
-impl eframe::App for ProcessExplorerApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) { 
-            egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
+    fn update_top_panel(&mut self, ctx: &egui::Context) {
+        egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Refresh").clicked() {
@@ -64,7 +70,9 @@ impl eframe::App for ProcessExplorerApp {
                 ui.menu_button("Process", |ui| { });
             });
         });
-
+    }
+    
+    fn update_bottom_panel(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 let cpu_usage = self.system.global_cpu_usage();
@@ -79,7 +87,6 @@ impl eframe::App for ProcessExplorerApp {
                     0.0
                 };
 
-                // CPU mini graph
                 ui.label(format!("CPU: {:.2}%", cpu_usage));
                 ui.separator();
                 ui.label(format!("Memory: {:.2}% ({})", 
@@ -96,5 +103,29 @@ impl eframe::App for ProcessExplorerApp {
             });
         });
     }
+    
+    fn update_central_panel(&mut self, ctx: &egui::Context) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.vertical(|ui| {
+                // Toolbar with filter
+                ui.horizontal(|ui| {
+                    if ui.button("🔄 Refresh").clicked() {
+                        self.system.refresh_all();
+                        self.last_refresh = std::time::Instant::now();
+                    }
+                    ui.separator();
+                    ui.label("Filter:");
+                });
+                ui.separator();
+            });
+        });
+    }
 }
 
+impl eframe::App for ProcessExplorerApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) { 
+        self.update_top_panel(ctx);
+        self.update_bottom_panel(ctx);
+        self.update_central_panel(ctx);
+    }
+}
