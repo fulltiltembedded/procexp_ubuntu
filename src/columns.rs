@@ -18,3 +18,18 @@ impl Default for VisibleColumns {
         }
     }
 }
+
+#[derive(Default, Clone, Copy, PartialEq)]
+pub enum SortColumn {
+    #[default]
+    Name,
+    Pid,
+    Cpu,
+    Memory,
+    Status,
+    VirtualMemory,
+    ParentPid,
+    StartTime,
+    ExecutablePath,
+    WorkingDirectory,
+}

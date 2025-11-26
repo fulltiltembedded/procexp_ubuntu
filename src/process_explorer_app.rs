@@ -1,11 +1,13 @@
 use eframe::egui;
 use sysinfo::{Pid, Process, System};
 use crate::columns::VisibleColumns;
+use crate::columns::SortColumn;
 
 pub struct ProcessExplorerApp {
     system: System,
     visible_columns: VisibleColumns,
     last_refresh: std::time::Instant,
+    sort_column: SortColumn,
 }
 
 impl ProcessExplorerApp {
@@ -17,6 +19,7 @@ impl ProcessExplorerApp {
             system,
             visible_columns: VisibleColumns::default(),
             last_refresh: std::time::Instant::now(),
+            sort_column: SortColumn::default(),
         }
     }
 
@@ -117,6 +120,65 @@ impl ProcessExplorerApp {
                     ui.label("Filter:");
                 });
                 ui.separator();
+
+                // Calculate available height for the panels
+                let available_height = ui.available_height();
+                let available_width = ui.available_width();
+
+                // Split view: Process list and details
+                ui.horizontal(|ui| {
+                    // Left panel: Process list (60% width)
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(available_width * 0.6, available_height),
+                        egui::Layout::top_down(egui::Align::Min),
+                        |ui| {
+                            ui.heading("Processes");
+
+                            egui::ScrollArea::vertical()
+                                .auto_shrink([false, false])
+                                .id_source("process_list_scroll")
+                                .show(ui, |ui| {
+                                    // Calculate number of columns
+                                    let mut num_columns = 5; // Default columns: Process, PID, CPU, Memory, Status
+                                    if self.visible_columns.virtual_memory { num_columns += 1; }
+                                    if self.visible_columns.parent_pid { num_columns += 1; }
+                                    if self.visible_columns.start_time { num_columns += 1; }
+                                    if self.visible_columns.executable_path { num_columns += 1; }
+                                    if self.visible_columns.working_directory { num_columns += 1; }
+
+                                    egui::Grid::new("process_grid")
+                                        .num_columns(num_columns)
+                                        .spacing([4.0, 2.0])
+                                        .striped(true)
+                                        .show(ui, |ui| {
+                                            // Header row
+                                            ui.strong("Process");
+                                            ui.selectable_label(self.sort_column == SortColumn::Pid, "PID");
+                                            ui.selectable_label(self.sort_column == SortColumn::Cpu,"CPU %");
+                                            ui.selectable_label(self.sort_column == SortColumn::Memory,"Memory");
+                                            ui.strong("Status");
+
+                                            // Extra column headers
+                                            if self.visible_columns.virtual_memory {
+                                                ui.selectable_label(self.sort_column == SortColumn::VirtualMemory, "Virtual Mem");
+                                            }
+                                            if self.visible_columns.parent_pid {
+                                                ui.selectable_label(self.sort_column == SortColumn::ParentPid,"Parent PID");
+                                            }
+                                            if self.visible_columns.start_time {
+                                                ui.selectable_label(self.sort_column == SortColumn::StartTime,"Start Time");
+                                            }
+                                            if self.visible_columns.executable_path {
+                                                ui.selectable_label(self.sort_column == SortColumn::ExecutablePath, "Executable");
+                                            }
+                                            if self.visible_columns.working_directory {
+                                                ui.selectable_label(self.sort_column == SortColumn::WorkingDirectory,"Working Dir");
+                                            }
+                                            ui.end_row();
+                                        });
+                                });
+                    });  
+                });
             });
         });
     }
